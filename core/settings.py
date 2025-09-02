@@ -19,28 +19,27 @@ BASE_DIR: Path = Path(__file__).resolve().parent.parent
 SECRET_KEY: str = os.environ.get('DJANGO_SECRET_KEY', 'change-me-secret-key')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG: bool = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
+DEBUG: bool = os.environ.get('DJANGO_DEBUG', '1') == '1'
 
-ALLOWED_HOSTS: list[str] = os.environ.get('DJANGO_ALLOWED_HOSTS', '').split() or []
+ALLOWED_HOSTS: list[str] = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 # Application definition
-
-INSTALLED_APPS: list[str] = [
+INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
     # Local apps
     'accounts',
     'restaurants',
     'orders',
     'payments',
-    'core',
 ]
 
-MIDDLEWARE: list[str] = [
+MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -63,6 +62,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'core.context_processors.stripe_public_key',  # <-- add this line
             ],
         },
     },
@@ -75,44 +75,31 @@ WSGI_APPLICATION: str = 'core.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': str(BASE_DIR / 'db.sqlite3'),
     }
 }
 
 # Password validation
 # https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',},
 ]
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.0/topics/i18n/
 LANGUAGE_CODE: str = 'en-us'
-
 TIME_ZONE: str = 'UTC'
-
 USE_I18N: bool = True
-
 USE_TZ: bool = True
 
 # Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/4.0/howto/static-files/
 STATIC_URL: str = '/static/'
-STATICFILES_DIRS: list[Path] = [BASE_DIR / 'static']
 STATIC_ROOT: Path = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS: list[Path] = [BASE_DIR / 'static']
 
-# Media files for uploaded images
 MEDIA_URL: str = '/media/'
 MEDIA_ROOT: Path = BASE_DIR / 'media'
 
@@ -131,11 +118,13 @@ STRIPE_SECRET_KEY: str = os.environ.get(
     'STRIPE_SECRET_KEY',
     'sk_test_51S0LPxISIz2c7ED1ibtNR7LSQkqDizaWVJwByGfoGy0OZ2kV0dnLmgEuv1BFauTtnc9jvIRB74eGMzFnbKQKbrsE000zt0avdC',
 )
+
 # For local dev: allow CSRF for localhost if you see CSRF warnings with fetch()
 CSRF_TRUSTED_ORIGINS = [
     'http://127.0.0.1:8000',
     'http://localhost:8000',
 ]
+
 # Login and logout redirects
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
