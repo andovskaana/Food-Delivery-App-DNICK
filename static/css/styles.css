@@ -1,0 +1,8 @@
+/* Custom styles for the food delivery project */
+body {
+  background-color: #f8f9fa;
+}
+main {
+  min-height: 80vh;
+}
+/* Additional classes can be added here to customize the layout */

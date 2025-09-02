@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Home - Food Delivery{% endblock %}
+
+{% block content %}
+<!-- Hero section -->
+<div class="position-relative">
+  <img src="{% static 'img/banner.png' %}" class="w-100" style="height: 320px; object-fit: cover;" alt="Food delivery banner">
+  <div class="position-absolute top-0 start-0 w-100 h-100" style="background: rgba(0, 0, 0, 0.45);"></div>
+  <div class="position-absolute top-50 start-50 translate-middle text-center text-white px-3" style="max-width: 720px; width: 100%;">
+    <h1 class="fw-bold mb-2" style="font-size: 2rem;">Feast Your Senses, <span class="text-warning">Fast and Fresh</span></h1>
+    <p class="lead mb-3">Order restaurant food, takeaway and groceries.</p>
+    <form method="get">
+      <div class="input-group input-group-lg">
+        <input type="text" class="form-control" name="q" placeholder="Search for restaurants…" value="{{ search_term }}">
+        <button class="btn btn-primary" type="submit">Search</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Restaurant list -->
+<div class="container mt-5">
+  <h2 class="mb-4">Browse Restaurants</h2>
+  <div class="row g-4">
+    {% for restaurant in restaurants %}
+      <div class="col-12 col-sm-6 col-md-4">
+        <div class="card h-100 shadow-sm">
+          {% if restaurant.image %}
+            <img src="{{ restaurant.image.url }}" class="card-img-top" alt="{{ restaurant.name }}">
+          {% else %}
+            <img src="https://via.placeholder.com/400x200?text=Restaurant" class="card-img-top" alt="{{ restaurant.name }}">
+          {% endif %}
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title">{{ restaurant.name }}</h5>
+            <p class="card-text">{{ restaurant.description|truncatechars:80 }}</p>
+            <div class="mb-2">
+              <span class="badge bg-warning text-dark me-1"><i class="bi bi-star-fill"></i> 4.5</span>
+              <span class="badge bg-secondary me-1">30 min</span>
+              {% if restaurant.is_open %}
+                <span class="badge bg-success">Open</span>
+              {% else %}
+                <span class="badge bg-danger">Closed</span>
+              {% endif %}
+            </div>
+            <p class="text-muted small mb-3">{{ restaurant.open_hours|default:"09:00–22:00" }}</p>
+            <a href="{% url 'restaurants:detail' restaurant.pk %}" class="btn btn-primary mt-auto">View Menu</a>
+          </div>
+        </div>
+      </div>
+    {% empty %}
+      <p>No restaurants match “{{ search_term }}”.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

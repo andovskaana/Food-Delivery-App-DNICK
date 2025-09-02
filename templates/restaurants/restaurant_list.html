@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block title %}Restaurants{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h1 class="mb-4">All Restaurants</h1>
+  <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+    {% for restaurant in restaurants %}
+      <div class="col">
+        <div class="card h-100 shadow-sm">
+          {% if restaurant.image %}
+            <img src="{{ restaurant.image.url }}" class="card-img-top" alt="{{ restaurant.name }}">
+          {% endif %}
+          <div class="card-body">
+            <h5 class="card-title">{{ restaurant.name }}</h5>
+            <p class="card-text">{{ restaurant.description|truncatechars:80 }}</p>
+            <a href="{% url 'restaurants:detail' restaurant.pk %}" class="btn btn-primary">View</a>
+          </div>
+        </div>
+      </div>
+    {% empty %}
+      <p>No restaurants found.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

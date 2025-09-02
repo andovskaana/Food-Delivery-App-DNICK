@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h1 class="mb-4">Admin Dashboard</h1>
+  <div class="row g-4">
+
+    <!-- User Management Card -->
+    <div class="col-12 col-md-4">
+      <div class="card h-100 text-center shadow-sm">
+        <div class="card-body d-flex flex-column align-items-center justify-content-center">
+          <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center mb-2"
+               style="width:56px;height:56px;">
+            <i class="bi bi-people-fill text-white" style="font-size:1.75rem;"></i>
+          </div>
+          <h5 class="card-title mb-1">Users</h5>
+          <p class="card-text text-muted mb-3">Manage users, roles and permissions</p>
+          <!-- custom user model lives in app 'accounts' -->
+          <a href="{% url 'admin:accounts_user_changelist' %}" class="btn btn-primary w-100">Manage Users</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Restaurant Management Card -->
+    <div class="col-12 col-md-4">
+      <div class="card h-100 text-center shadow-sm">
+        <div class="card-body d-flex flex-column align-items-center justify-content-center">
+          <div class="bg-success rounded-circle d-flex align-items-center justify-content-center mb-2"
+               style="width:56px;height:56px;">
+            <i class="bi bi-shop-window text-white" style="font-size:1.75rem;"></i>
+          </div>
+          <h5 class="card-title mb-1">Restaurants</h5>
+          <p class="card-text text-muted mb-3">Create, edit and enable restaurants</p>
+          <a href="{% url 'admin:restaurants_restaurant_changelist' %}" class="btn btn-success w-100">Manage Restaurants</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Product Management Card -->
+    <div class="col-12 col-md-4">
+      <div class="card h-100 text-center shadow-sm">
+        <div class="card-body d-flex flex-column align-items-center justify-content-center">
+          <div class="bg-warning rounded-circle d-flex align-items-center justify-content-center mb-2"
+               style="width:56px;height:56px;">
+            <i class="bi bi-basket2-fill text-white" style="font-size:1.75rem;"></i>
+          </div>
+          <h5 class="card-title mb-1">Products</h5>
+          <p class="card-text text-muted mb-3">Add or update menu items</p>
+          <a href="{% url 'admin:restaurants_product_changelist' %}" class="btn btn-warning w-100 text-white">Manage Products</a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Optional: quick link to full Django admin index -->
+  <div class="text-end mt-4">
+    <a class="btn btn-outline-secondary" href="{% url 'admin:index' %}">Open full Django Admin</a>
+  </div>
+</div>
+{% endblock %}

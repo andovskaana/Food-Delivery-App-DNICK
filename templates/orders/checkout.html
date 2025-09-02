@@ -1,0 +1,179 @@
+{% extends 'base.html' %}
+
+{% block title %}Checkout{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h1 class="mb-3">Checkout</h1>
+
+  {% if order %}
+    <!-- Existing order: show payment form -->
+    <h4 class="mb-2">Order #{{ order.id }} — Total: ${{ order.total }}</h4>
+
+    <table class="table table-bordered">
+      <thead class="table-light">
+        <tr>
+          <th>Product</th>
+          <th class="text-center">Quantity</th>
+          <th class="text-center">Price</th>
+          <th class="text-center">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+          <tr>
+            <td>{{ item.product.name }}</td>
+            <td class="text-center">{{ item.quantity }}</td>
+            <td class="text-center">${{ item.product.price }}</td>
+            <td class="text-center">${{ item.line_total }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <!-- Hidden form only to get CSRF token into the DOM -->
+    <form id="csrf-form" style="display:none;">{% csrf_token %}</form>
+
+    <div id="payment-errors" class="alert alert-danger d-none"></div>
+
+    <div id="payment-section" class="mt-4">
+      <div id="card-element" class="border rounded p-3 bg-white"></div>
+      <button id="confirm-payment" class="btn btn-success mt-3">Pay</button>
+    </div>
+
+  {% else %}
+    <!-- Summary before placing order -->
+    <h4 class="mb-2">Order Summary</h4>
+    <table class="table table-bordered">
+      <thead class="table-light">
+        <tr>
+          <th>Product</th>
+          <th class="text-center">Quantity</th>
+          <th class="text-center">Price</th>
+          <th class="text-center">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+          <tr>
+            <td>{{ item.product.name }}</td>
+            <td class="text-center">{{ item.quantity }}</td>
+            <td class="text-center">${{ item.product.price }}</td>
+            <td class="text-center">${{ item.line_total }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="mb-3">
+      <strong>Subtotal:</strong> ${{ subtotal }}
+    </div>
+    <form method="post">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-primary">Place Order</button>
+      <a href="{% url 'orders:cart' %}" class="btn btn-secondary ms-2">Back to Cart</a>
+    </form>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+{% if order %}
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+(function() {
+  const intentUrl = "{% url 'payments:create_intent' order.id %}";
+  const confirmUrl = "/orders/{{ order.id }}/confirm/"; // keep if your confirm view lives here
+  const paymentSection = document.getElementById('payment-section');
+  const errorBox = document.getElementById('payment-errors');
+
+  function getCSRFToken() {
+    const el = document.querySelector('#csrf-form input[name="csrfmiddlewaretoken"]');
+    return el ? el.value : '';
+  }
+
+  async function postJSON(url, payload) {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': getCSRFToken(),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload || {})
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || ('Request failed: ' + res.status));
+    }
+    const ctype = res.headers.get('content-type') || '';
+    return ctype.includes('application/json') ? res.json() : {};
+  }
+
+  async function initPayment() {
+    try {
+      // Ask the server to create/retrieve a PaymentIntent
+      const data = await postJSON(intentUrl, {});
+
+      // If Stripe is configured and we have a client secret → use Stripe Elements
+      if (data.client_secret && "{{ STRIPE_PUBLIC_KEY }}") {
+        const stripe = Stripe("{{ STRIPE_PUBLIC_KEY }}");
+        const elements = stripe.elements();
+        const cardElement = elements.create('card', { hidePostalCode: true });
+        cardElement.mount('#card-element');
+
+        const payBtn = document.getElementById('confirm-payment');
+        payBtn.addEventListener('click', async () => {
+          payBtn.disabled = true;
+          const { error, paymentIntent } = await stripe.confirmCardPayment(data.client_secret, {
+            payment_method: { card: cardElement }
+          });
+          if (error) {
+            errorBox.classList.remove('d-none');
+            errorBox.textContent = error.message || 'Payment failed';
+            payBtn.disabled = false;
+            return;
+          }
+          if (paymentIntent && paymentIntent.status === 'succeeded') {
+            await postJSON(confirmUrl, {});
+            window.location.href = '/orders/my/';
+          } else {
+            errorBox.classList.remove('d-none');
+            errorBox.textContent = 'Payment status: ' + (paymentIntent ? paymentIntent.status : 'unknown');
+            payBtn.disabled = false;
+          }
+        });
+
+      } else {
+        // Stripe not available → show simulation buttons
+        paymentSection.innerHTML = '';
+        const successBtn = document.createElement('button');
+        successBtn.textContent = 'Simulate Success';
+        successBtn.className = 'btn btn-success me-2';
+        successBtn.onclick = async function() {
+          await postJSON('/payments/' + data.id + '/simulate-success/', {});
+          await postJSON(confirmUrl, {});
+          window.location.href = '/orders/my/';
+        };
+        const failBtn = document.createElement('button');
+        failBtn.textContent = 'Simulate Failure';
+        failBtn.className = 'btn btn-danger';
+        failBtn.onclick = async function() {
+          await postJSON('/payments/' + data.id + '/simulate-failure/', {});
+          errorBox.classList.remove('d-none');
+          errorBox.textContent = 'Payment failed (simulated).';
+        };
+        paymentSection.appendChild(successBtn);
+        paymentSection.appendChild(failBtn);
+      }
+
+    } catch (err) {
+      console.error(err);
+      errorBox.classList.remove('d-none');
+      errorBox.textContent = err.message || 'Unable to initialize payment.';
+    }
+  }
+
+  initPayment();
+})();
+</script>
+{% endif %}
+{% endblock %}
