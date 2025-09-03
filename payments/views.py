@@ -49,13 +49,12 @@ class PaymentIntentView(LoginRequiredMixin, View):
     def post(self, request: HttpRequest, order_id: int) -> HttpResponse:
         order = get_object_or_404(Order, pk=order_id, user=request.user)
 
-        # Get or create the payment linked to this order
-        payment, _ = Payment.objects.get_or_create(order=order)
-
-        # Sync amount/currency to the order
-        # Adjust 'order.total' if your Order uses a different field name
+        payment, created = Payment.objects.get_or_create(
+            order=order,
+            defaults={"amount": Decimal(order.total), "currency": "usd"},
+        )
         payment.amount = Decimal(order.total)
-        payment.currency = 'usd'
+        payment.currency = "usd"
 
         client_secret = None
         # Use Stripe when available and API key configured
