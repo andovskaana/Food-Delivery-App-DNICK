@@ -1,21 +1,90 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Restaurants{% endblock %}
 
 {% block content %}
+<style>
+  /* Page chrome */
+  .hero {
+    position: relative; height: 340px; margin-bottom: 2rem; overflow: hidden;
+    background: linear-gradient(135deg,#0ea5e9,#22c55e);
+  }
+  .hero::after { content:""; position:absolute; inset:0; background:rgba(0,0,0,.35); }
+  .hero-inner { position:relative; z-index:1; height:100%; display:flex; align-items:center; justify-content:center; text-align:center; color:#fff; padding:0 1rem; }
+  .search-input { border-radius:.75rem; padding:.85rem 1rem; border:0; }
+
+  /* Card look & feel (closer to your React cards) */
+  .restaurant-card {
+    border: 0; border-radius: 1rem; overflow: hidden; background: #fff;
+    box-shadow: 0 6px 20px rgba(0,0,0,.06);
+    transition: transform .18s ease, box-shadow .18s ease;
+  }
+  .restaurant-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 28px rgba(0,0,0,.10);
+  }
+  .restaurant-card .card-img-top {
+    aspect-ratio: 16/9; object-fit: cover; width: 100%;
+  }
+  .card-title { font-weight: 700; letter-spacing: .2px; }
+
+  /* Tiny chips like in the JSX */
+  .chip {
+    display: inline-flex; align-items: center; gap:.35rem;
+    padding: .25rem .6rem; border-radius: 999px; font-size: .8rem;
+    border: 1px solid #e5e7eb; color: #374151; background: #fff;
+  }
+  .chip-success { border-color:#c6f6d5; color:#065f46; background:#ecfdf5; }
+  .chip-muted { color:#6b7280; }
+</style>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-inner container">
+    <div style="max-width: 760px;">
+      <h1 class="fw-bold mb-2" style="line-height:1.15;">Feast Your Senses, <span style="color:#f97316;">Fast and Fresh</span></h1>
+      <p class="mb-3" style="opacity:.9;">Order restaurant food, takeaway and groceries.</p>
+      <label for="searchInput" class="visually-hidden">Search restaurants</label>
+      <input id="searchInput" class="form-control search-input" placeholder="Search for restaurants…">
+    </div>
+  </div>
+</div>
+
 <div class="container">
-  <h1 class="mb-4">All Restaurants</h1>
-  <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+  <h2 class="mb-3">Browse Restaurants</h2>
+
+  <div id="cardsGrid" class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-xl-4 g-4">
     {% for restaurant in restaurants %}
-      <div class="col">
-        <div class="card h-100 shadow-sm">
-          {% if restaurant.image %}
-            <img src="{{ restaurant.image.url }}" class="card-img-top" alt="{{ restaurant.name }}">
+      <div class="col restaurant-item"
+           data-name="{{ restaurant.name|lower }}"
+           data-open-hours="{{ restaurant.open_hours|default:'09:00-22:00' }}">
+        <div class="card h-100 restaurant-card">
+          {% if restaurant.image_url %}
+            <img src="{{ restaurant.image_url }}" alt="{{ restaurant.name }}" class="card-img-top">
           {% endif %}
-          <div class="card-body">
-            <h5 class="card-title">{{ restaurant.name }}</h5>
-            <p class="card-text">{{ restaurant.description|truncatechars:80 }}</p>
-            <a href="{% url 'restaurants:detail' restaurant.pk %}" class="btn btn-primary">View</a>
+
+          <div class="card-body d-flex flex-column">
+            <div class="d-flex align-items-start justify-content-between mb-2">
+              <h5 class="card-title mb-0">{{ restaurant.name }}</h5>
+              {% if restaurant.category %}
+                <span class="chip chip-muted">{{ restaurant.category }}</span>
+              {% endif %}
+            </div>
+
+            <div class="mb-2">
+              <span class="chip">⭐ {{ restaurant.rating|default:4.5 }}</span>
+              <span class="chip">{{ restaurant.delivery_time_estimate|default:30 }} min</span>
+              <span class="chip" data-open-badge>…</span>
+            </div>
+
+            {% if restaurant.description %}
+              <p class="card-text text-muted mb-3">{{ restaurant.description|truncatechars:100 }}</p>
+            {% endif %}
+
+            <div class="mt-auto">
+              <a href="{% url 'restaurants:detail' restaurant.pk %}" class="btn btn-primary w-100">View Menu</a>
+            </div>
           </div>
         </div>
       </div>
@@ -24,4 +93,55 @@
     {% endfor %}
   </div>
 </div>
+
+<script>
+  // --- Search (client side) ---
+  const $search = document.getElementById('searchInput');
+  const items = Array.from(document.querySelectorAll('.restaurant-item'));
+  function applySearch() {
+    const q = ($search.value || '').trim().toLowerCase();
+    items.forEach(card => {
+      const name = card.dataset.name || '';
+      card.style.display = name.includes(q) ? '' : 'none';
+    });
+  }
+  $search.addEventListener('input', applySearch);
+
+  // --- Open/Closed badge (supports multiple intervals: "09:00-14:00, 17:00-22:00") ---
+  const timeToMinutes = (hhmm) => {
+    const [h, m] = (hhmm || '').split(':').map(Number);
+    return (h || 0) * 60 + (m || 0);
+  };
+  const parseIntervals = (val) => {
+    if (!val || typeof val !== 'string') return [];
+    return val.split(',').map(s => s.trim()).filter(Boolean).map(part => {
+      const [start, end] = part.split('-').map(s => s.trim());
+      if (!start || !end) return null;
+      return { start: timeToMinutes(start), end: timeToMinutes(end) };
+    }).filter(Boolean);
+  };
+  const isOpenAt = (nowMin, intervals) => {
+    for (const { start, end } of intervals) {
+      if (start === end) continue;
+      if (start < end) { if (nowMin >= start && nowMin < end) return true; }
+      else { if (nowMin >= start || nowMin < end) return true; } // crosses midnight
+    }
+    return false;
+  };
+  function updateOpenBadges() {
+    const now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    document.querySelectorAll('.restaurant-item').forEach(card => {
+      const raw = card.dataset.openHours || '09:00-22:00';
+      const badge = card.querySelector('[data-open-badge]');
+      const open = isOpenAt(nowMin, parseIntervals(raw));
+      if (badge) {
+        badge.textContent = open ? 'Open' : 'Closed';
+        badge.className = 'chip ' + (open ? 'chip-success' : '');
+      }
+    });
+  }
+  updateOpenBadges();
+  setInterval(updateOpenBadges, 60000);
+</script>
 {% endblock %}
