@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}Track Order #{{ order.id }}{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+  <h1 class="mb-3">Track Order #{{ order.id }}</h1>
+
+  <p class="text-muted">
+    <strong>Restaurant:</strong> {{ from_label }}<br>
+    <strong>Delivery to:</strong> {{ to_label }}<br>
+    <strong>Status:</strong> {{ order.get_status_display|default:order.status }}
+  </p>
+
+  <div class="card mt-4">
+    <div class="card-body">
+      <h5 class="card-title">Delivery progress</h5>
+      <ul class="list-group list-group-flush">
+        <li class="list-group-item {% if current_step >= 0 %}fw-bold text-success{% endif %}">
+          1. Order placed
+        </li>
+        <li class="list-group-item {% if current_step >= 1 %}fw-bold text-success{% endif %}">
+          2. Order confirmed / preparing
+        </li>
+        <li class="list-group-item {% if current_step >= 2 %}fw-bold text-success{% endif %}">
+          3. Courier on the way
+        </li>
+        <li class="list-group-item {% if current_step >= 3 %}fw-bold text-success{% endif %}">
+          4. Delivered
+        </li>
+      </ul>
+
+      <!-- Fake „мапа“ со камионче што се поместува -->
+      <div class="mt-4 p-4 bg-light border rounded">
+        <div class="d-flex justify-content-between">
+          <div>📍 {{ from_label }}</div>
+          <div>🏠 {{ to_label }}</div>
+        </div>
+
+        <div class="mt-3 position-relative" style="height: 30px;">
+          <!-- сива линија -->
+          <div class="position-absolute top-50 start-0 end-0 translate-middle-y"
+               style="height: 4px; background-color: #ccc;"></div>
+
+          {% if current_step == 0 %}
+            <div class="position-absolute top-50 translate-middle-y" style="left: 10%;">🚚</div>
+          {% elif current_step == 1 %}
+            <div class="position-absolute top-50 translate-middle-y" style="left: 35%;">🚚</div>
+          {% elif current_step == 2 %}
+            <div class="position-absolute top-50 translate-middle-y" style="left: 65%;">🚚</div>
+          {% else %}
+            <div class="position-absolute top-50 translate-middle-y" style="left: 90%;">🚚</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <a href="{% url 'orders:my_orders' %}" class="btn btn-secondary mt-3">
+    ← Back to My Orders
+  </a>
+</div>
+{% endblock %}

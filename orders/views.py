@@ -386,3 +386,40 @@ class CourierOrderDetailView(LoginRequiredMixin, View):
         }
         return render(request, self.template_name, context)
 
+class MyOrdersView(LoginRequiredMixin, View):
+    template_name = 'orders/order_list.html'
+
+    def get(self, request: HttpRequest) -> HttpResponse:
+        orders = Order.objects.filter(user=request.user).select_related('restaurant')
+        return render(request, self.template_name, {'orders': orders})
+
+
+class OrderTrackingView(LoginRequiredMixin, View):
+    """
+    Страница каде корисникот може да ја „следи“ нарачката.
+    """
+
+    template_name = 'orders/order_tracking.html'
+
+    def get(self, request: HttpRequest, order_id: int) -> HttpResponse:
+        # 1. Ја вчитуваме нарачката, но САМО ако му припаѓа на најавениот корисник
+        order = get_object_or_404(Order, pk=order_id, user=request.user)
+
+        # 2. Едноставна логика: од статус добиваме „чекор“ 0–3
+        status = order.status
+        if status == Order.STATUS_PENDING:
+            current_step = 0          # нарачката чека одобрување
+        elif status in [Order.STATUS_PLACED, Order.STATUS_CONFIRMED]:
+            current_step = 1          # нарачката е примена/потврдена
+        elif status in [Order.STATUS_ACCEPTED, Order.STATUS_PICKED_UP]:
+            current_step = 2          # курирот ја прифатил / ја подигнал
+        else:  # STATUS_DELIVERED или било што после тоа
+            current_step = 3          # нарачката е доставена
+
+        context = {
+            "order": order,
+            "current_step": current_step,
+            "from_label": order.restaurant.name,
+            "to_label": order.user.get_full_name() or order.user.username,
+        }
+        return render(request, self.template_name, context)

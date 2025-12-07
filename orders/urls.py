@@ -16,6 +16,7 @@ from .views import (
     CourierCompleteOrderView,
     OrderConfirmView,
     CourierOrderDetailView,
+    OrderTrackingView,
 )
 
 app_name = 'orders'
@@ -31,9 +32,10 @@ urlpatterns = [
     path('courier/', CourierOrdersView.as_view(), name='courier_orders'),
     path('courier/dashboard/', CourierDashboardView.as_view(), name='courier_dashboard'),
     path('courier/assign/<int:order_id>/', CourierAssignOrderView.as_view(), name='courier_assign'),
-    path('courier/orders/<int:order_id>/start/',   CourierStartDeliveryView.as_view(), name='courier_start'),
+    path('courier/orders/<int:order_id>/start/', CourierStartDeliveryView.as_view(), name='courier_start'),
     path('courier/complete/<int:order_id>/', CourierCompleteOrderView.as_view(), name='courier_complete'),
     path('<int:order_id>/confirm/', OrderConfirmView.as_view(), name='order_confirm'),
     path('courier/orders/<int:order_id>/', CourierOrderDetailView.as_view(),
          name='courier_order_detail'),
+    path('track/<int:order_id>/', OrderTrackingView.as_view(), name='track_order'),
 ]
