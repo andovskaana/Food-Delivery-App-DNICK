@@ -14,8 +14,15 @@ class BaseBootstrapForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        for field_name, field in self.fields.items():
-            field.widget.attrs.setdefault('class', 'form-control')
+        for name, field in self.fields.items():
+            widget = field.widget
+
+            # ✅ За checkbox користиме Bootstrap form-check-input
+            if isinstance(widget, forms.CheckboxInput):
+                widget.attrs.setdefault('class', 'form-check-input')
+            else:
+                # ✅ За останатите (text, number, textarea, file...)
+                widget.attrs.setdefault('class', 'form-control')
 
 
 class RestaurantForm(BaseBootstrapForm):
@@ -28,3 +35,4 @@ class ProductForm(BaseBootstrapForm):
     class Meta:
         model = Product
         exclude = ('restaurant', 'created_at', 'updated_at')
+        # ❌ НИШТО тука, го вадиме RadioSelect за is_available

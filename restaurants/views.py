@@ -61,14 +61,6 @@ class RestaurantDetailView(DetailView):
         return context
 
 
-class OwnerRestaurantListView(OwnerRequiredMixin, ListView):
-    model = Restaurant
-    template_name = 'restaurants/owner_restaurant_list.html'
-    context_object_name = 'restaurants'
-
-    def get_queryset(self):
-        return Restaurant.objects.filter(owner=self.request.user)
-
 
 class RestaurantCreateView(OwnerRequiredMixin, CreateView):
     model = Restaurant
@@ -140,8 +132,31 @@ class OwnerRestaurantProductsView(OwnerRequiredMixin, ListView):
 
 class ProductDeleteView(OwnerRequiredMixin, View):
     def post(self, request, pk: int) -> HttpResponse:
-        product = get_object_or_404(Product, pk=pk, restaurant__owner=request.user)
-        restaurant_pk = product.restaurant.pk
+        # Наоѓаме продукт кој му припаѓа на тековниот owner
+        product = get_object_or_404(
+            Product,
+            pk=pk,
+            restaurant__owner=request.user
+        )
+
+        # Го бришеме продуктот
         product.delete()
+
+        # Порака за успешно бришење
         messages.success(request, 'Product deleted.')
-        return redirect('restaurants:owner_restaurant_products', restaurant_pk=restaurant_pk)
+
+        # Го враќаме owner-от на My Restaurants (owner_restaurant_list.html)
+        return redirect('restaurants:owner_restaurants')
+
+class OwnerRestaurantListView(LoginRequiredMixin, ListView):
+    model = Restaurant
+    template_name = 'restaurants/owner_restaurant_list.html'
+    context_object_name = 'restaurants'
+
+    def get_queryset(self):
+        # Сите ресторани на тековниот owner + нивните products
+        return (
+            Restaurant.objects
+            .filter(owner=self.request.user)
+            .prefetch_related('products')
+        )
