@@ -188,8 +188,10 @@ class OwnerOrdersView(LoginRequiredMixin, View):
     template_name = 'orders/order_list.html'
 
     def dispatch(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
-        if not request.user.is_authenticated or not request.user.is_owner():
+        if not request.user.is_authenticated:
             raise PermissionDenied('You do not have access to owner orders.')
+        # if not request.user.is_authenticated or not request.user.is_owner():
+        #     raise PermissionDenied('You do not have access to owner orders.')
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request: HttpRequest) -> HttpResponse:
@@ -282,7 +284,8 @@ class OrderConfirmView(LoginRequiredMixin, View):
     def post(self, request: HttpRequest, order_id: int) -> HttpResponse:
         order = get_object_or_404(Order, pk=order_id)
         if not request.user.is_owner() or order.restaurant.owner != request.user:
-            raise PermissionDenied('Only the owner of the restaurant can confirm.')
+            # raise PermissionDenied('Only the owner of the restaurant can confirm.')
+            return redirect('orders:owner_orders')
         if order.status != Order.STATUS_PENDING:
             return JsonResponse({'error': 'Order is not pending.'}, status=400)
         order.status = Order.STATUS_CONFIRMED

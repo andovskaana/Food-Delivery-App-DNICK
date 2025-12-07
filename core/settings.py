@@ -113,11 +113,11 @@ AUTH_USER_MODEL: str = 'accounts.User'
 # Stripe configuration (test keys from the original backend)
 STRIPE_PUBLIC_KEY: str = os.environ.get(
     'STRIPE_PUBLIC_KEY',
-    'pk_test_51S0LPxISIz2c7ED1kvux04tVOZWothXvPPC664G8ob5m0bfUO8dl8Jv4JzbIIMAQRJ1FPJ8aae3cr1IZPdFBJkH200XCUEHZcd',
+    'pk_test_51SUuLl6LISy3DXkrzgjbGA9EjuRD3hf4GxfEvXphbBOzv2DHi6p7QYxk4eSRTrQj0QfOekOthSUUqDcaaUojL1r300spjeVkr8',
 )
 STRIPE_SECRET_KEY: str = os.environ.get(
     'STRIPE_SECRET_KEY',
-    'sk_test_51S0LPxISIz2c7ED1ibtNR7LSQkqDizaWVJwByGfoGy0OZ2kV0dnLmgEuv1BFauTtnc9jvIRB74eGMzFnbKQKbrsE000zt0avdC',
+    'sk_test_51SUuLl6LISy3DXkrCzIUISUdC36P3bIPry9sVw3HgNBxBRHVeDkYUGNcIb7VThdBI26WnZRiViW59z5VTnQrD2He00hn4vAmhk',
 )
 
 # For local dev: allow CSRF for localhost if you see CSRF warnings with fetch()
