@@ -24,7 +24,8 @@ class Order(models.Model):
     updated to ``picked_up`` and, finally, to ``delivered`` once the order has
     reached the customer. Canceled orders remain in the ``canceled`` state.
     """
-
+    STATUS_PLACED = "placed" # moja promena
+    STATUS_ACCEPTED = "accepted"
     STATUS_PENDING = 'pending'
     STATUS_CONFIRMED = 'confirmed'
     STATUS_PICKED_UP = 'picked_up'
@@ -32,6 +33,8 @@ class Order(models.Model):
     STATUS_DELIVERED = 'delivered'
 
     STATUS_CHOICES: list[tuple[str, str]] = [
+        (STATUS_PLACED, "Placed"), # moja promena
+        (STATUS_ACCEPTED, "Accepted"),
         (STATUS_PENDING, 'Pending'),
         (STATUS_CONFIRMED, 'Confirmed'),
         (STATUS_PICKED_UP, 'Picked up'),
@@ -62,7 +65,7 @@ class Order(models.Model):
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
-        default=STATUS_PENDING,
+        default=STATUS_PLACED, #moja promena
         help_text='Current status of the order',
     )
     subtotal = models.DecimalField(

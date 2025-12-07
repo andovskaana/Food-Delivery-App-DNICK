@@ -125,7 +125,7 @@ class CheckoutView(LoginRequiredMixin, View):
             line_items.append((product, quantity, price_at_time, line_total))
             subtotal += line_total
 
-        order = Order.objects.create(user=request.user, restaurant=restaurant, total=subtotal)
+        order = Order.objects.create(user=request.user, restaurant=restaurant, total=subtotal, status=Order.STATUS_PLACED)
         for product, quantity, price_at_time, _ in line_items:
             OrderItem.objects.create(
                 order=order,
@@ -225,11 +225,14 @@ class CourierDashboardView(LoginRequiredMixin, View):
 
     def get(self, request: HttpRequest) -> HttpResponse:
         available_orders = (
-            Order.objects.filter(status=Order.STATUS_CONFIRMED, courier__isnull=True)
+            Order.objects.filter(status=Order.STATUS_PLACED, courier__isnull=True)
             .select_related('user', 'restaurant')
         )
         my_active_orders = (
-            Order.objects.filter(courier=request.user, status__in=[Order.STATUS_CONFIRMED, Order.STATUS_PICKED_UP])
+            Order.objects.filter(
+                courier=request.user,
+                status__in=[Order.STATUS_ACCEPTED, Order.STATUS_PICKED_UP]
+            )
             .select_related('user', 'restaurant')
         )
         my_delivered_orders = (
@@ -253,17 +256,30 @@ def _is_ajax(request):
 
 class CourierAssignOrderView(LoginRequiredMixin, View):
     def post(self, request: HttpRequest, order_id: int) -> HttpResponse:
+        # 1. Безбедносна проверка – само курир смее да ја повика оваа акција
         if not request.user.is_courier():
             raise PermissionDenied('Only couriers can assign orders.')
+
+        # 2. Ја вчитуваме нарачката
         order = get_object_or_404(Order, pk=order_id)
-        if order.status != Order.STATUS_CONFIRMED or order.courier_id is not None:
+
+        # 3. Мора да биде PLACED и да нема веќе доделен курир
+        if order.status != Order.STATUS_PLACED or order.courier_id is not None:
             return JsonResponse({'error': 'Order is not available for assignment.'}, status=400)
+
+        # 4. Овој чекор значи: курирот ја ПРИФАЌА нарачката
         order.courier = request.user
-        order.status = Order.STATUS_PICKED_UP
+        order.status = Order.STATUS_ACCEPTED   # 🔴 наместо STATUS_PICKED_UP
         order.save(update_fields=['courier', 'status'])
+
+        # 5. Ако е AJAX – враќаме JSON (за подоцна да можеме да правиме динамичен UI)
         if _is_ajax(request):
-            return JsonResponse({'id': order.id, 'status': order.status, 'courier': order.courier.username})
-        messages.success(request, f'Order #{order.id} assigned to you and marked as picked up.')
+            return JsonResponse(
+                {'id': order.id, 'status': order.status, 'courier': order.courier.username}
+            )
+
+        # 6. Flash порака и назад на dashboard
+        messages.success(request, f'Order #{order.id} assigned to you and marked as accepted.')
         return redirect('orders:courier_dashboard')
 
 
@@ -292,3 +308,81 @@ class OrderConfirmView(LoginRequiredMixin, View):
         order.save(update_fields=['status'])
         messages.success(request, f'Order #{order.id} confirmed.')
         return redirect('orders:owner_orders')
+
+class CourierStartDeliveryView(LoginRequiredMixin, View):
+    """
+    Курирот ја означува нарачката дека е подигната од ресторан (ACCEPTED -> PICKED_UP).
+    """
+
+    def post(self, request: HttpRequest, order_id: int) -> HttpResponse:
+        # Само курир може да го прави ова
+        if not request.user.is_courier():
+            raise PermissionDenied('Only couriers can start delivery.')
+
+        # Нарачката мора да му припаѓа на овој курир
+        order = get_object_or_404(Order, pk=order_id, courier=request.user)
+
+        # Мора да биде во статус ACCEPTED
+        if order.status != Order.STATUS_ACCEPTED:
+            return JsonResponse({'error': 'Order is not in an accepted state.'}, status=400)
+
+        # Го менуваме во PICKED_UP
+        order.status = Order.STATUS_PICKED_UP
+        order.save(update_fields=['status'])
+
+        if _is_ajax(request):
+            return JsonResponse({'id': order.id, 'status': order.status})
+
+        messages.success(request, f'Order #{order.id} marked as picked up.')
+        return redirect('orders:courier_dashboard')
+class CourierOrderDetailView(LoginRequiredMixin, View):
+    """
+    Детален приказ за една нарачка за курирот:
+    - ресторан
+    - адреса за достава
+    - ставка(и) од нарачката
+    """
+
+    template_name = "orders/courier_order_detail.html"
+
+    def dispatch(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
+        if not request.user.is_authenticated or not request.user.is_courier():
+            raise PermissionDenied("You do not have access to courier order details.")
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request: HttpRequest, order_id: int) -> HttpResponse:
+        # ја вчитуваме нарачката + корисник + ресторан + ставки
+        order = (
+            Order.objects
+            .select_related("restaurant", "user")
+            .prefetch_related("items__product")
+            .filter(pk=order_id)
+            .first()
+        )
+        if not order:
+            raise PermissionDenied("Order not found.")
+
+        # (опционално) ако сакаш да ограничиш да гледа само свои:
+        # if order.courier and order.courier != request.user:
+        #     raise PermissionDenied("You cannot view orders assigned to another courier.")
+
+        # ја подготвуваме листата на ставки со пресметана под-вкупно
+        items = []
+        for item in order.items.all():
+            line_total = item.price_at_time * item.quantity
+            items.append(
+                {
+                    "product": item.product,
+                    "quantity": item.quantity,
+                    "unit_price": item.price_at_time,
+                    "line_total": line_total,
+                }
+            )
+
+        context = {
+            "order": order,
+            "items": items,
+            "total": order.total,
+        }
+        return render(request, self.template_name, context)
+
