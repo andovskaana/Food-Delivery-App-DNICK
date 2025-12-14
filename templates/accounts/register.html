@@ -1,50 +1,117 @@
 {% extends 'base.html' %}
-
 {% load static %}
 
 {% block title %}Register{% endblock %}
 
 {% block content %}
-<div class="row g-0 vh-100">
-  <!-- Illustration -->
-  <div class="col-md-6 d-none d-md-block" style="background-image: url('{% static 'img/auth-illustration.png' %}'); background-size: cover; background-position: center;"></div>
-  <!-- Form -->
-  <div class="col-md-6 d-flex align-items-center justify-content-center">
-    <div class="card shadow-sm" style="width: 100%; max-width: 500px; border-radius: 1rem;">
-      <div class="card-body p-4">
-        <!-- Brand -->
-        <div class="d-flex align-items-center gap-2 mb-3">
-          <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; background-color: #f97316;">
-            <i class="bi bi-egg-fried text-white"></i>
-          </div>
-          <h5 class="mb-0 fw-bold">MilAnaFoodDelivery</h5>
-        </div>
-        <h3 class="fw-bold mb-1">Join us!</h3>
-        <p class="text-muted mb-3">Create an account</p>
-        <form method="post" novalidate>
-          {% csrf_token %}
-          {% if form.non_field_errors %}
-            <div class="alert alert-danger">{{ form.non_field_errors }}</div>
-          {% endif %}
-          {% for field in form %}
-            <div class="mb-3">
-              {{ field.label_tag }}
-              {{ field }}
-              {% if field.help_text %}
-                <div class="form-text">{{ field.help_text }}</div>
-              {% endif %}
-              {% for error in field.errors %}
-                <div class="text-danger small">{{ error }}</div>
-              {% endfor %}
+
+    {# Page-specific styling for the registration layout #}
+    <style>
+        /* Main wrapper: take (almost) full viewport height to avoid vertical scrolling on desktop */
+        .auth-page {
+            min-height: calc(100vh - 120px); /* leave room for navbar / global paddings */
+            display: flex;
+            align-items: stretch;
+        }
+
+        /* Left illustration column (desktop only) */
+        .auth-illustration {
+            background-image: url("{% static 'img/auth-illustration.png' %}");
+            background-size: cover;
+            background-position: center;
+        }
+
+        /* Right column: centers the card vertically and horizontally */
+        .auth-form-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1.5rem;
+        }
+
+        /* On larger screens: hide vertical scroll inside this section if possible */
+        @media (min-width: 992px) {
+            .auth-page {
+                overflow-y: hidden;
+            }
+        }
+
+        /* On small screens: allow natural scroll and hide the left illustration */
+        @media (max-width: 767.98px) {
+            .auth-page {
+                min-height: auto;
+                padding-top: 1.5rem;
+                padding-bottom: 1.5rem;
+            }
+
+            .auth-illustration {
+                display: none;
+            }
+        }
+    </style>
+
+    <div class="container-fluid px-0">
+        <div class="row g-0 auth-page">
+            {# Left side: illustration (hidden on smaller screens) #}
+            <div class="col-md-6 auth-illustration d-none d-md-block"></div>
+
+            {# Right side: registration card with the Django form #}
+            <div class="col-md-6 auth-form-wrapper">
+                <div class="card shadow-sm border-0"
+                     style="width: 100%; max-width: 500px; border-radius: 1rem;">
+                    <div class="card-body p-4">
+
+                        {# Brand / app identity #}
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center"
+                                 style="width: 32px; height: 32px; background-color: #f97316;">
+                                <i class="bi bi-egg-fried text-white"></i>
+                            </div>
+                            <h5 class="mb-0 fw-bold">MilAnaFoodDelivery</h5>
+                        </div>
+
+                        <h3 class="fw-bold mb-1">Join us!</h3>
+                        <p class="text-muted mb-3">Create an account</p>
+
+                        {# Django registration form (functionality unchanged) #}
+                        <form method="post" novalidate>
+                            {% csrf_token %}
+
+                            {# Non-field (global) form errors #}
+                            {% if form.non_field_errors %}
+                                <div class="alert alert-danger">
+                                    {{ form.non_field_errors }}
+                                </div>
+                            {% endif %}
+
+                            {# Render each form field with label, help text and errors #}
+                            {% for field in form %}
+                                <div class="mb-3">
+                                    {{ field.label_tag }}
+                                    {{ field }}
+                                    {% if field.help_text %}
+                                        <div class="form-text">{{ field.help_text }}</div>
+                                    {% endif %}
+                                    {% for error in field.errors %}
+                                        <div class="text-danger small">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endfor %}
+
+                            <button type="submit" class="btn btn-primary w-100">
+                                Sign up
+                            </button>
+                        </form>
+
+                        {# Link to the login page for existing users #}
+                        <div class="text-center mt-3 text-muted">
+                            Already have an account?
+                            <a href="{% url 'accounts:login' %}">Sign in</a>
+                        </div>
+                    </div>
+                </div>
             </div>
-          {% endfor %}
-          <button type="submit" class="btn btn-primary w-100">Sign up</button>
-        </form>
-        <div class="text-center mt-3 text-muted">
-          Already have an account? <a href="{% url 'accounts:login' %}">Sign in</a>
         </div>
-      </div>
     </div>
-  </div>
-</div>
+
 {% endblock %}

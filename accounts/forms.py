@@ -24,7 +24,6 @@ class UserRegistrationForm(UserCreationForm):
         model = User
         fields = ('username', 'first_name', 'last_name', 'email', 'role')
 
-
 class LoginForm(AuthenticationForm):
     """Simple subclass of Django's authentication form to customize widgets."""
     username = forms.CharField(

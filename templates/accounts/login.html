@@ -1,63 +1,133 @@
 {% extends 'base.html' %}
-
 {% load static %}
 
 {% block title %}Login{% endblock %}
 
 {% block content %}
-<!-- Fullscreen auth layout: split illustration and form -->
-<div class="row g-0 vh-100">
-  <!-- Illustration column (hidden on small screens) -->
-  <div class="col-md-6 d-none d-md-block" style="background-image: url('{% static 'img/auth-illustration.png' %}'); background-size: cover; background-position: center;"></div>
-  <!-- Form column -->
-  <div class="col-md-6 d-flex align-items-center justify-content-center">
-    <div class="card shadow-sm" style="width: 100%; max-width: 500px; border-radius: 1rem;">
-      <div class="card-body p-4">
-        <!-- Brand header -->
-        <div class="d-flex align-items-center gap-2 mb-3">
-          <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; background-color: #f97316;">
-            <i class="bi bi-egg-fried text-white"></i>
-          </div>
-          <h5 class="mb-0 fw-bold">MilAnaFoodDelivery</h5>
-        </div>
-        <h3 class="fw-bold mb-1">Welcome!</h3>
-        <p class="text-muted mb-3">Login</p>
-        <form method="post" novalidate>
-          {% csrf_token %}
-          {% if form.non_field_errors %}
-            <div class="alert alert-danger">{{ form.non_field_errors }}</div>
-          {% endif %}
-          <!-- Username -->
-          <div class="mb-3">
-            {{ form.username.label_tag }}
-            {{ form.username }}
-            {% for error in form.username.errors %}
-              <div class="text-danger small">{{ error }}</div>
-            {% endfor %}
-          </div>
-          <!-- Password with toggle (basic) -->
-          <div class="mb-3">
-            {{ form.password.label_tag }}
-            {{ form.password }}
-            {% for error in form.password.errors %}
-              <div class="text-danger small">{{ error }}</div>
-            {% endfor %}
-          </div>
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <!-- Placeholder for remember me checkbox -->
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="remember">
-              <label class="form-check-label" for="remember">Remember me</label>
+
+    {# Page-specific styling for the login layout (aligned with register.html) #}
+    <style>
+        /* Main wrapper: almost full viewport height to minimize vertical scroll on desktop */
+        .auth-page {
+            min-height: calc(100vh - 120px);  /* leave room for navbar / global paddings */
+            display: flex;
+            align-items: stretch;
+        }
+
+        /* Left illustration column (desktop only) */
+        .auth-illustration {
+            background-image: url("{% static 'img/auth-illustration.png' %}");
+            background-size: cover;
+            background-position: center;
+        }
+
+        /* Right column: centers the login card */
+        .auth-form-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1.5rem;
+        }
+
+        /* On larger screens: avoid showing a vertical scrollbar inside the auth section */
+        @media (min-width: 992px) {
+            .auth-page {
+                overflow-y: hidden;
+            }
+        }
+
+        /* On small screens: allow natural scroll and hide the illustration */
+        @media (max-width: 767.98px) {
+            .auth-page {
+                min-height: auto;
+                padding-top: 1.5rem;
+                padding-bottom: 1.5rem;
+            }
+
+            .auth-illustration {
+                display: none;
+            }
+        }
+    </style>
+
+    <div class="container-fluid px-0">
+        <div class="row g-0 auth-page">
+            {# Left side: illustration (hidden on small screens) #}
+            <div class="col-md-6 auth-illustration d-none d-md-block"></div>
+
+            {# Right side: login card with the Django authentication form #}
+            <div class="col-md-6 auth-form-wrapper">
+                <div class="card shadow-sm border-0"
+                     style="width: 100%; max-width: 500px; border-radius: 1rem;">
+                    <div class="card-body p-4">
+
+                        {# Brand header #}
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center"
+                                 style="width: 32px; height: 32px; background-color: #f97316;">
+                                <i class="bi bi-egg-fried text-white"></i>
+                            </div>
+                            <h5 class="mb-0 fw-bold">MilAnaFoodDelivery</h5>
+                        </div>
+
+                        <h3 class="fw-bold mb-1">Welcome!</h3>
+                        <p class="text-muted mb-3">Login to your account</p>
+
+                        {# Django LoginForm (functionality unchanged) #}
+                        <form method="post" novalidate>
+                            {% csrf_token %}
+
+                            {# Non-field (global) form errors #}
+                            {% if form.non_field_errors %}
+                                <div class="alert alert-danger">
+                                    {{ form.non_field_errors }}
+                                </div>
+                            {% endif %}
+
+                            {# Username field #}
+                            <div class="mb-3">
+                                {{ form.username.label_tag }}
+                                {{ form.username }}
+                                {% for error in form.username.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+
+                            {# Password field #}
+                            <div class="mb-3">
+                                {{ form.password.label_tag }}
+                                {{ form.password }}
+                                {% for error in form.password.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+
+                            {# Remember me (UI only) + forgot password placeholder #}
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="remember">
+                                    <label class="form-check-label" for="remember">
+                                        Remember me
+                                    </label>
+                                </div>
+                                <a href="#">Forgot password?</a>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary w-100">
+                                Sign in
+                            </button>
+                        </form>
+
+                        {# Link to registration page for users without an account #}
+                        <div class="text-center mt-3 text-muted">
+                            Don't have an account?
+                            <a href="{% url 'accounts:register' %}">Sign up now</a>
+                        </div>
+
+                    </div>
+                </div>
             </div>
-            <a href="#">Forgot password?</a>
-          </div>
-          <button type="submit" class="btn btn-primary w-100">Sign in</button>
-        </form>
-        <div class="text-center mt-3 text-muted">
-          Don't have an account? <a href="{% url 'accounts:register' %}">Sign up now</a>
         </div>
-      </div>
     </div>
-  </div>
-</div>
+
 {% endblock %}
