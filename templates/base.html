@@ -1,59 +1,95 @@
 {% load static %}
+{# Base template shared by all pages. Other templates extend this file with {% extends 'base.html' %}. #}
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- Character encoding and responsive viewport for mobile-friendly layout -->
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Page title. Child templates can override this block to set a custom title per page. -->
   <title>{% block title %}Food Delivery{% endblock %}</title>
 
-  <!-- Bootstrap CSS -->
+  <!-- Bootstrap core CSS from CDN for layout and components -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Project-wide custom styles loaded from the static 'css/styles.css' file -->
   <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+
+  <!-- Bootstrap Icons library for vector icons used across the UI -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
+  <!-- Optional extra <head> content. Individual pages can inject additional CSS or meta tags here. -->
   {% block extra_head %}{% endblock %}
 </head>
 <body>
+<!-- Main navigation bar available on all pages -->
 <nav class="navbar navbar-expand-lg navbar-light bg-light shadow-sm">
   <div class="container-fluid">
+    <!-- Brand/logo. Clicking it returns the user to the home page. -->
     <a class="navbar-brand" href="{% url 'home' %}">FoodDelivery</a>
+
+    <!-- Toggler button for collapsing the navbar on smaller screens (mobile/tablet). -->
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
             aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
       <span class="navbar-toggler-icon"></span>
     </button>
+
+    <!-- Collapsible navigation content (left and right menus). -->
     <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <!-- Left side navigation: global links visible for all users. -->
       <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <!-- Link to home page -->
         <li class="nav-item"><a class="nav-link" href="{% url 'home' %}">Home</a></li>
+
+        <!-- Link to restaurants listing -->
         <li class="nav-item"><a class="nav-link" href="{% url 'restaurants:list' %}">Restaurants</a></li>
+
+        <!-- Role-based navigation items shown only to authenticated users -->
         {% if user.is_authenticated %}
+          <!-- Owner-specific dropdown menu (for restaurant owners) -->
           {% if user.is_owner %}
             <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle" href="#" id="ownerMenu" role="button" data-bs-toggle="dropdown"
                  aria-expanded="false">Owner</a>
               <ul class="dropdown-menu" aria-labelledby="ownerMenu">
+                <!-- List and manage restaurants owned by the current user -->
                 <li><a class="dropdown-item" href="{% url 'restaurants:owner_restaurants' %}">My Restaurants</a></li>
+                <!-- View orders related to the owner's restaurants -->
                 <li><a class="dropdown-item" href="{% url 'orders:owner_orders' %}">Orders</a></li>
               </ul>
             </li>
           {% endif %}
+
+          <!-- Courier-specific link to their dashboard -->
           {% if user.is_courier %}
             <li class="nav-item"><a class="nav-link" href="{% url 'orders:courier_dashboard' %}">Courier Dashboard</a></li>
           {% endif %}
+
+          <!-- Admin-specific link to the custom admin dashboard page -->
           {% if user.is_admin %}
             <li class="nav-item"><a class="nav-link" href="{% url 'accounts:admin_dashboard' %}">Admin</a></li>
           {% endif %}
         {% endif %}
       </ul>
+
+      <!-- Right side navigation: authentication, user menu and cart. -->
       <ul class="navbar-nav mb-2 mb-lg-0">
         {% if user.is_authenticated %}
+          <!-- Link to the shopping cart for the logged-in user -->
           <li class="nav-item"><a class="nav-link" href="{% url 'orders:cart' %}">Cart</a></li>
+
+          <!-- Dropdown with the user's name and account-related actions -->
           <li class="nav-item dropdown">
+            <!-- Display full name if available, otherwise fallback to username -->
             <a class="nav-link dropdown-toggle" href="#" id="userMenu" role="button" data-bs-toggle="dropdown"
                aria-expanded="false">{{ user.get_full_name|default:user.username }}</a>
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenu">
+              <!-- Link to the authenticated user's order history -->
               <li><a class="dropdown-item" href="{% url 'orders:my_orders' %}">My Orders</a></li>
               <li><hr class="dropdown-divider"></li>
               <li>
-                <!-- POST form for logout -->
+                <!-- POST form for logout to follow security best practices (no GET logout). -->
                 <form action="{% url 'accounts:logout' %}" method="post" class="px-3 m-0">
                   {% csrf_token %}
                   <button type="submit" class="dropdown-item p-0">Logout</button>
@@ -62,6 +98,7 @@
             </ul>
           </li>
         {% else %}
+          <!-- Links for anonymous users: login and registration. -->
           <li class="nav-item"><a class="nav-link" href="{% url 'accounts:login' %}">Login</a></li>
           <li class="nav-item"><a class="nav-link" href="{% url 'accounts:register' %}">Register</a></li>
         {% endif %}
@@ -69,10 +106,16 @@
     </div>
   </div>
 </nav>
+
+<!-- Main page content placeholder. Child templates inject their content into this block. -->
 <main class="py-4">
   {% block content %}{% endblock %}
 </main>
+
+<!-- Bootstrap JavaScript bundle (includes Popper) for interactive components like dropdowns and modals. -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Optional extra scripts. Individual pages can add page-specific JavaScript here. -->
 {% block extra_scripts %}{% endblock %}
 </body>
 </html>
