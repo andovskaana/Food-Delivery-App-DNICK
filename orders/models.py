@@ -24,7 +24,7 @@ class Order(models.Model):
     updated to ``picked_up`` and, finally, to ``delivered`` once the order has
     reached the customer. Canceled orders remain in the ``canceled`` state.
     """
-    STATUS_PLACED = "placed" # moja promena
+    STATUS_PLACED = "placed"  # moja promena
     STATUS_ACCEPTED = "accepted"
     STATUS_PENDING = 'pending'
     STATUS_CONFIRMED = 'confirmed'
@@ -33,7 +33,7 @@ class Order(models.Model):
     STATUS_DELIVERED = 'delivered'
 
     STATUS_CHOICES: list[tuple[str, str]] = [
-        (STATUS_PLACED, "Placed"), # moja promena
+        (STATUS_PLACED, "Placed"),  # moja promena
         (STATUS_ACCEPTED, "Accepted"),
         (STATUS_PENDING, 'Pending'),
         (STATUS_CONFIRMED, 'Confirmed'),
@@ -62,10 +62,16 @@ class Order(models.Model):
         blank=True,
         help_text='Courier assigned to deliver the order',
     )
+    delivery_address = models.CharField(
+        max_length=255,
+        default='Skopje',
+        blank=True,
+        help_text='Delivery address snapshot captured at checkout.'
+    )
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
-        default=STATUS_PLACED, #moja promena
+        default=STATUS_PLACED,  # moja promena
         help_text='Current status of the order',
     )
     subtotal = models.DecimalField(
@@ -117,7 +123,17 @@ class OrderItem(models.Model):
 
     @property
     def line_total(self) -> Decimal:
-        return self.price_at_time * self.quantity
+        """
+        Line total for this order item.
+
+        If `price_at_time` is None (legacy / old records), fall back to the
+        current product price so that the admin page does not crash.
+        """
+        price = self.price_at_time
+        if price is None:
+            # Fallback: use current product price instead of failing
+            price = self.product.price or Decimal("0.00")
+        return price * self.quantity
 
     def __str__(self) -> str:  # type: ignore[override]
         return f"{self.quantity} × {self.product.name}"

@@ -3,61 +3,298 @@
 {% block title %}Track Order #{{ order.id }}{% endblock %}
 
 {% block content %}
-<div class="container my-4">
-  <h1 class="mb-3">Track Order #{{ order.id }}</h1>
+<div class="container my-4 my-md-5">
+  <h1 class="mb-4">Track Order #{{ order.id }}</h1>
 
-  <p class="text-muted">
-    <strong>Restaurant:</strong> {{ from_label }}<br>
-    <strong>Delivery to:</strong> {{ to_label }}<br>
-    <strong>Status:</strong> {{ order.get_status_display|default:order.status }}
-  </p>
+  <div class="row g-4">
+    <!-- LEFT: order summary + progress -->
+    <div class="col-lg-4">
+      <!-- Order summary card -->
+      <div class="card shadow-sm border-0 mb-3">
+        <div class="card-body">
+          <h5 class="card-title mb-3">Order summary</h5>
 
-  <div class="card mt-4">
-    <div class="card-body">
-      <h5 class="card-title">Delivery progress</h5>
-      <ul class="list-group list-group-flush">
-        <li class="list-group-item {% if current_step >= 0 %}fw-bold text-success{% endif %}">
-          1. Order placed
-        </li>
-        <li class="list-group-item {% if current_step >= 1 %}fw-bold text-success{% endif %}">
-          2. Order confirmed / preparing
-        </li>
-        <li class="list-group-item {% if current_step >= 2 %}fw-bold text-success{% endif %}">
-          3. Courier on the way
-        </li>
-        <li class="list-group-item {% if current_step >= 3 %}fw-bold text-success{% endif %}">
-          4. Delivered
-        </li>
-      </ul>
+          <div class="mb-3">
+            <div class="small text-uppercase text-muted mb-1">Restaurant</div>
+            <div class="fw-semibold">{{ from_label }}</div>
+          </div>
 
-      <!-- Fake „мапа“ со камионче што се поместува -->
-      <div class="mt-4 p-4 bg-light border rounded">
-        <div class="d-flex justify-content-between">
-          <div>📍 {{ from_label }}</div>
-          <div>🏠 {{ to_label }}</div>
+          <div class="mb-3">
+            <div class="small text-uppercase text-muted mb-1">Delivery to</div>
+            <div class="fw-semibold">{{ to_label }}</div>
+          </div>
+
+          <div class="mb-3">
+            <div class="small text-uppercase text-muted mb-1">Status</div>
+            <span class="badge
+              {% if order.status == 'delivered' %}bg-success
+              {% elif order.status == 'picked_up' or order.status == 'accepted' %}bg-info
+              {% elif order.status == 'confirmed' %}bg-primary
+              {% else %}bg-secondary{% endif %}">
+              {{ order.get_status_display|default:order.status }}
+            </span>
+          </div>
+
+          <div class="mb-2">
+            <div class="small text-uppercase text-muted mb-1">Restaurant address</div>
+            <div>{{ restaurant_address }}</div>
+          </div>
+
+          <div>
+            <div class="small text-uppercase text-muted mb-1">Delivery address</div>
+            <div>{{ delivery_address }}</div>
+          </div>
         </div>
+      </div>
 
-        <div class="mt-3 position-relative" style="height: 30px;">
-          <!-- сива линија -->
-          <div class="position-absolute top-50 start-0 end-0 translate-middle-y"
-               style="height: 4px; background-color: #ccc;"></div>
+      <!-- Progress card -->
+      <div class="card shadow-sm border-0">
+        <div class="card-body">
+          <h5 class="card-title mb-3">Delivery progress</h5>
 
-          {% if current_step == 0 %}
-            <div class="position-absolute top-50 translate-middle-y" style="left: 10%;">🚚</div>
-          {% elif current_step == 1 %}
-            <div class="position-absolute top-50 translate-middle-y" style="left: 35%;">🚚</div>
-          {% elif current_step == 2 %}
-            <div class="position-absolute top-50 translate-middle-y" style="left: 65%;">🚚</div>
-          {% else %}
-            <div class="position-absolute top-50 translate-middle-y" style="left: 90%;">🚚</div>
-          {% endif %}
+          <ul class="list-group list-group-flush small">
+            <li class="list-group-item border-0 ps-0 {% if current_step >= 1 %}fw-semibold text-success{% endif %}">
+              1. Order placed
+            </li>
+            <li class="list-group-item border-0 ps-0 {% if current_step >= 2 %}fw-semibold text-success{% endif %}">
+              2. Order confirmed / preparing
+            </li>
+            <li class="list-group-item border-0 ps-0 {% if current_step >= 3 %}fw-semibold text-success{% endif %}">
+              3. Courier on the way
+            </li>
+            <li class="list-group-item border-0 ps-0 {% if current_step >= 4 %}fw-semibold text-success{% endif %}">
+              4. Delivered
+            </li>
+          </ul>
         </div>
       </div>
     </div>
+
+    <!-- RIGHT: map / static route -->
+    <div class="col-lg-8">
+      {% if show_map %}
+        <div class="card shadow-sm border-0">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h5 class="card-title mb-0">Live map (demo)</h5>
+              <span class="text-muted small">Courier movement is simulated for 30 seconds.</span>
+            </div>
+
+            <div id="map" class="border rounded"></div>
+
+            <!-- Data bridge for JS: coordinates + animation + courier position -->
+            <div id="coords"
+                 data-order-id="{{ order.id }}"
+                 data-start-lat="{{ start_coords.0 }}"
+                 data-start-lng="{{ start_coords.1 }}"
+                 data-end-lat="{{ end_coords.0 }}"
+                 data-end-lng="{{ end_coords.1 }}"
+                 data-animate="{% if animate_courier %}1{% else %}0{% endif %}"
+                 data-position="{{ courier_position }}">
+            </div>
+
+            <!-- Hidden form: POST to mark-delivered endpoint from JS -->
+            <form id="mark-delivered-form"
+                  method="post"
+                  action="{% url 'orders:track_mark_delivered' order.id %}"
+                  class="d-none">
+              {% csrf_token %}
+            </form>
+
+            <small class="text-muted d-block mt-2">
+              Dummy geocoding: координатите се генерираат од адресите (без реален API).
+            </small>
+          </div>
+        </div>
+      {% else %}
+        <div class="card shadow-sm border-0">
+          <div class="card-body">
+            <h5 class="card-title mb-3">Delivery route</h5>
+
+            <div class="alert alert-info mb-4">
+              Map will appear after a courier accepts the order.
+            </div>
+
+            <div class="p-3 bg-light rounded">
+              <div class="d-flex justify-content-between mb-2">
+                <div>📍 {{ from_label }}</div>
+                <div>🏠 {{ to_label }}</div>
+              </div>
+
+              <div class="mt-2 position-relative" style="height: 30px;">
+                <div class="position-absolute top-50 start-0 end-0 translate-middle-y"
+                     style="height: 4px; background-color: #dee2e6;"></div>
+
+                {# Simple static bar when there is no courier/map #}
+                {% if current_step <= 1 %}
+                  <div class="position-absolute top-50 translate-middle-y" style="left: 10%;">🚚</div>
+                {% elif current_step == 2 %}
+                  <div class="position-absolute top-50 translate-middle-y" style="left: 40%;">🚚</div>
+                {% elif current_step == 3 %}
+                  <div class="position-absolute top-50 translate-middle-y" style="left: 70%;">🚚</div>
+                {% else %}
+                  <div class="position-absolute top-50 translate-middle-y" style="left: 90%;">🚚</div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endif %}
+    </div>
   </div>
 
-  <a href="{% url 'orders:my_orders' %}" class="btn btn-secondary mt-3">
-    ← Back to My Orders
-  </a>
+  <div class="mt-4">
+    <a href="{% url 'orders:my_orders' %}" class="btn btn-outline-secondary">
+      ← Back to My Orders
+    </a>
+  </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+  <style>
+    #map {
+      height: 420px;
+      width: 100%;
+      background: #f8f9fa;
+    }
+  </style>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+    (function () {
+      const coordsEl = document.getElementById("coords");
+      if (!coordsEl) return; // show_map == false
+
+      const startLat = parseFloat(coordsEl.dataset.startLat);
+      const startLng = parseFloat(coordsEl.dataset.startLng);
+      const endLat = parseFloat(coordsEl.dataset.endLat);
+      const endLng = parseFloat(coordsEl.dataset.endLng);
+      const animate = coordsEl.dataset.animate === "1";
+      const courierPosition = coordsEl.dataset.position || "restaurant";
+
+      const start = [startLat, startLng];
+      const end = [endLat, endLng];
+
+      // 1) Create map
+      const map = L.map("map");
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: "&copy; OpenStreetMap contributors"
+      }).addTo(map);
+
+      // 2) Fit bounds to both points
+      const bounds = L.latLngBounds([start, end]).pad(0.25);
+      map.fitBounds(bounds);
+
+      // 3) Emoji markers for restaurant and delivery
+      const emojiIcon = (emoji) => L.divIcon({
+        className: "emoji-marker",
+        html: `<div style="font-size:26px; line-height:26px;">${emoji}</div>`,
+        iconSize: [26, 26],
+        iconAnchor: [13, 13]
+      });
+
+      L.marker(start, { icon: emojiIcon("🍔") }).addTo(map).bindPopup("Restaurant");
+      L.marker(end, { icon: emojiIcon("🏠") }).addTo(map).bindPopup("Delivery");
+
+      // 4) Route polyline
+      L.polyline([start, end], { weight: 4 }).addTo(map);
+
+      // 5) Courier marker behaviour
+      const lerp = (a, b, t) => a + (b - a) * t;
+
+      // Decide starting position of courier based on status:
+      // - "restaurant" → near start
+      // - "in_transit" → near start, will move
+      // - "customer"   → near end
+      let tStart;
+      if (courierPosition === "customer") {
+        tStart = 0.97;
+      } else if (courierPosition === "in_transit") {
+        tStart = 0.15;
+      } else {
+        // "restaurant" or fallback
+        tStart = 0.05;
+      }
+
+      let tCurrent = tStart;
+
+      const courierMarker = L.marker(
+        [lerp(startLat, endLat, tCurrent), lerp(startLng, endLng, tCurrent)],
+        { icon: emojiIcon("🛵") }
+      ).addTo(map);
+
+      // If we don't animate (Placed/Confirmed/Accepted/Delivered), stop here.
+      if (!animate) {
+        return;
+      }
+
+      // Smooth easing for nicer animation
+      function easeInOut(x) {
+        return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
+      }
+
+      const DURATION_MS = 30000; // 30 seconds total animation
+      const startTime = performance.now();
+
+      function tick(now) {
+        const elapsed = now - startTime;
+        const rawT = Math.min(elapsed / DURATION_MS, 1); // 0..1
+        const eased = easeInOut(rawT);
+
+        // Move from tStart → 1 (customer)
+        const t = tStart + (1 - tStart) * eased;
+        tCurrent = t;
+
+        courierMarker.setLatLng([
+          lerp(startLat, endLat, t),
+          lerp(startLng, endLng, t)
+        ]);
+
+        if (rawT < 1) {
+          requestAnimationFrame(tick);
+        } else {
+          // When animation finishes, automatically mark order as delivered
+          autoMarkDelivered();
+        }
+      }
+
+      requestAnimationFrame(tick);
+
+      // Sends POST to track_mark_delivered endpoint and reloads the page
+      function autoMarkDelivered() {
+        const form = document.getElementById("mark-delivered-form");
+        if (!form) return;
+
+        const url = form.action;
+        const csrfInput = form.querySelector("input[name='csrfmiddlewaretoken']");
+        const csrfToken = csrfInput ? csrfInput.value : null;
+
+        fetch(url, {
+          method: "POST",
+          headers: {
+            "X-Requested-With": "XMLHttpRequest",
+            ...(csrfToken ? { "X-CSRFToken": csrfToken } : {})
+          }
+        })
+        .then((resp) => {
+          if (!resp.ok) {
+            throw new Error("Failed to mark order as delivered");
+          }
+          return resp.json().catch(() => ({}));
+        })
+        .then(() => {
+          // Reload to reflect new DELIVERED status and stop animation
+          window.location.reload();
+        })
+        .catch((err) => {
+          console.error("Error marking delivered:", err);
+        });
+      }
+    })();
+  </script>
 {% endblock %}
